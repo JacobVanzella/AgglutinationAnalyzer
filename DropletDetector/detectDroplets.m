@@ -4,7 +4,6 @@
 % 
 % USAGE: droplets = detectDroplets(fileName)
 %        droplets = detectDroplets(fileName, areaThreshold)
-%        droplets = detectDroplets(fileName, areaThreshold)
 %        droplets = detectDroplets(fileName, areaThreshold, filtering)
 %        droplets = detectDroplets(fileName, areaThreshold, filtering, display)
 %        
@@ -13,7 +12,7 @@
 %   areaThreshold: An interger value that determines the minimum area
 %       droplets that should be considered. e.g. areaThreshold = 10 returns
 %       all droplets identified to have area of 10 pixels or greater.
-%       (Default: 250)
+%       (Default: 250000)
 % 
 %   filtering: Boolean value, if true applies filtering to remove small
 %       particles from detection, if false filtering will not occur
@@ -22,24 +21,21 @@
 %   display: Boolean value, if true shows video results as output is being
 %       calculated, if false video is not shown (faster). (Default: false)
 % 
-% This code was adapted in part from the MathWorks Help Center page:
+% This code was adapted from the MathWorks Help Center page:
 % https://www.mathworks.com/help/vision/examples/motion-based-multiple-object-tracking.html
 
 function droplets = detectDroplets(fileName, areaThreshold, filter, display)
 % Handles number of input arguments
 switch nargin
     case 1
-        areaThreshold = 250; filter = false; display = false;
+        areaThreshold = 250000; filter = false; display = false;
     case 2
         filter = false; display = false;
     case 3
         display = false;
 end
 
-% % Predeclare variables as global
-% global obj, global tracks, global nextId, global frame, ...
-%     global centroids, global bboxes, global mask, global assignments, ...
-%     global unassignedTracks, global unassignedDetections;
+% Predeclare global variables 
 
 % Create System objects used for reading video, detecting moving objects,
 % and displaying the results.
@@ -49,7 +45,7 @@ tracks = initializeTracks(); % Create an empty array of tracks.
 droplets = initializeDroplets(); % Create an empty array of droplets.
 
 nextID = 1; % ID of the next track.
-dropID = 1; % ID of the next droplet.
+dropID = 0; % ID of the next droplet.
 frameID = 0; % ID of the current frame.
 
 % Detect moving objects, and track them across video frames.
@@ -109,7 +105,8 @@ end
             'id', {}, ...
             'bbox', {}, ...
             'totalVisibleCount', {}, ...
-            'frame', {});
+            'frame', {}, ...
+            'frameID' ,{});
     end
 
     function tracks = initializeTracks()
@@ -171,12 +168,29 @@ end
     end
 
     function updateAssignedDroplets()
-%         dropletAreas = areas;
-%         dropletAreas(dropletAreas<areaThreshold) = 0;
-%         for i = 1:size(dropletAreas,2)
-%             if dropletAreas(i)
-%                 
-%         end
+        % Set the areas lower than the threshold to zero
+        dropletAreas = areas;
+        dropletAreas(dropletAreas<areaThreshold) = 0;
+        
+        % Add frames meeting criteria to the droplets structure
+        for i = 1:size(dropletAreas,1)
+            if dropletAreas(i) && bboxes(i,1) ~= 1 && bboxes(i,2) ~= 1 ...
+                    && bboxes(i,1) + bboxes(i,3) < size(frame,2) ...
+                    && bboxes(i,2) + bboxes(i,4) < size(frame,1)
+                
+                if dropID == 0
+                    dropID = dropID + 1;
+                elseif droplets(end).frameID < (frameID - 3)
+                    dropID = dropID + 1;
+                end
+                
+                droplets(end+1).id = dropID;
+                droplets(end).bbox = bboxes(i,:);
+                droplets(end).totalVisibleCount = dropletAreas(i);
+                droplets(end).frame = frame;
+                droplets(end).frameID = frameID;
+            end
+        end
     end
 
     function updateAssignedTracks()
