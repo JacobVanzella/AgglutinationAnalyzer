@@ -2,19 +2,35 @@
 % droplets which will then be tracked. Returns a matrix containing each
 % frame where a droplet is in full view.
 % 
-% USAGE: droplets = detectDroplets(fileName)
+% USAGE: plugs = detectPlugs(fileName)
+%        plugs = detectPlugs(filename, candidateRatio)
 %        
 %   fileName: A string or character array containing the fileName or path.
 %       e.g. 'sample1.avi'
+%
+%   candidateRatio: A real number on [0,1], candidate frames must be
+%       greater than or equal to the maximum entropy multiplied by the
+%       candidate ratio.
 
-function plugs = detectPlugs(filename)
+function plugs = entropyDetection(filename, candidateRatio)
+    %% Handle function call
+    % Handle input arguments
+    switch nargin
+        case 1
+            candidateRatio = 0.99;
+    end
+    
+    % Exit call on invalid input
+    if candidateRatio < 0 || candidateRatio > 1
+        disp("You dun goofed");
+        return;
+    end
+    
     %% Initialize Workspace
     % Creates video reader to read frames from video file
     reader = VideoReader(filename);
     % Frame entropy, indexed by frame number
     entropyValues = zeros(1,int32(reader.FrameRate*reader.Duration));
-    % How close a frame needs to be to min entropy to be a candidate
-    candidateRatio = .99;
     % Struct to contain plug frames and associated information
     plugs = struct( ...
         'plugID', {}, ...
