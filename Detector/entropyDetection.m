@@ -22,8 +22,7 @@ function plugs = entropyDetection(filename, candidateRatio)
     
     % Exit call on invalid input
     if candidateRatio < 0 || candidateRatio > 1
-        disp("You dun goofed");
-        return;
+        error("Invalid candidate ratio, must be real on [0,1]");
     end
     
     %% Initialize Workspace
